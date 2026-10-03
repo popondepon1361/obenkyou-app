@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <!-- スマホ対応: ピンチズーム防止・レスポンシブ設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>すうじのおべんきょう</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: "Hiragino Maru Gothic ProN", "Meiryo UI", "Comic Sans MS", sans-serif;
+      margin: 0;
+      padding: 12px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      transition: background 0.5s ease;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    /* タイトル */
+    h1 {
+      font-size: clamp(22px, 5vw, 32px);
+      color: #0284c7;
+      margin: 0 0 10px 0;
+      text-shadow: 2px 2px 0px #fff;
+      text-align: center;
+    }
+
+    /* テーマ選択エリア */
+    .theme-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 500px;
+      overflow-x: auto;
+      padding: 4px;
+      scrollbar-width: none;
+    }
+    .theme-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .theme-btn {
+      flex: 0 0 auto;
+      font-size: 26px;
+      padding: 8px 12px;
+      border: 3px solid #7dd3fc;
+      border-radius: 18px;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-btn.active {
+      border-color: #f43f5e;
+      background-color: #fff1f2;
+      transform: scale(1.15);
+      box-shadow: 0 6px 12px rgba(244, 63, 94, 0.2);
+    }
+
+    /* 数字ボタン 1〜10 */
+    .number-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 12px;
+    }
+    .num-btn {
+      font-size: clamp(22px, 6vw, 32px);
+      font-weight: 900;
+      color: #431407;
+      background: linear-gradient(180deg, #fef08a 0%, #facc15 100%);
+      border: none;
+      border-bottom: 5px solid #ca8a04;
+      border-radius: 16px;
+      padding: 10px 0;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: all 0.1s;
+    }
+    .num-btn:active, .num-btn.active {
+      transform: translateY(3px);
+      border-bottom-width: 2px;
+      background: linear-gradient(180deg, #facc15 0%, #eab308 100%);
+    }
+
+    /* 表示エリア */
+    .display-area {
+      width: 100%;
+      max-width: 500px;
+      flex: 1;
+      min-height: 220px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 4px solid #38bdf8;
+      border-radius: 24px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* イラスト整列表示（欠け防止対策追加） */
+    .item-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .item-icon {
+      font-size: clamp(38px, 10vw, 54px);
+      line-height: 1.2;
+      padding: 2px;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      animation: popIn 0.3s ease-out forwards;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+    }
+    .item-icon:active {
+      transform: scale(1.4) rotate(10deg);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+      80% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    /* テキスト表示エリア（左の数字削除、右の文字を拡大） */
+    .text-display {
+      font-size: clamp(20px, 4.5vw, 26px);
+      font-weight: bold;
+      color: #15803d;
+      text-align: center;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .big-num {
+      font-size: clamp(40px, 12vw, 68px);
+      font-weight: 900;
+      color: #dc2626;
+      margin-right: 4px;
+      text-shadow: 2px 2px 0px #fef08a;
+    }
+
+    /* コントロールボタン（もう一度・すとっぷ・りせっと） */
+    .controls {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 500px;
+      margin-top: 10px;
+    }
+    .action-btn {
+      flex: 1;
+      font-size: clamp(14px, 3.5vw, 18px);
+      font-weight: bold;
+      padding: 12px 6px;
+      border-radius: 20px;
+      border: none;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: all 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .action-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+    }
+    .btn-speak { background: #0284c7; }
+    .btn-stop { background: #e11d48; }
+    .btn-reset { background: #64748b; }
+
+    /* エフェクト描画用キャンバス */
+    #effectCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* 風船オーバーレイ */
+    .party-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 999;
+      overflow: hidden;
+    }
+    .balloon {
+      position: absolute;
+      bottom: -100px;
+      font-size: 50px;
+      animation: floatUp 4s linear forwards;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>すうじのおべんきょう</h1>
+
+  <!-- イラストテーマ切り替え -->
+  <div class="theme-bar" id="themeContainer"></div>
+
+  <!-- 数字選択ボタン 1〜10 -->
+  <div class="number-grid" id="numberGrid"></div>
+
+  <!-- メイン表示エリア -->
+  <div class="display-area" id="displayArea">
+    <canvas id="effectCanvas"></canvas>
+    <div class="item-grid" id="itemGrid"></div>
+    <div class="text-display" id="textDisplay">すうじをおしてね</div>
+  </div>
+
+  <!-- コントロールボタン群 -->
+  <div class="controls">
+    <button class="action-btn btn-speak" onclick="speakCurrent()">🔊 きく</button>
+    <button class="action-btn btn-stop" onclick="stopAll()">🛑 すとっぷ</button>
+    <button class="action-btn btn-reset" onclick="resetAll()">🔄 りせっと</button>
+  </div>
+
+  <div class="party-overlay" id="partyOverlay"></div>
+
+  <script>
+    // テーマ設定（絵文字の欠け防止のため標準鉛筆コード '✏' / '✏️' を調整）
+    const themes = [
+      { id: 'apple', name: 'りんご', emoji: '🍎', unit: 'こ', bg: 'linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%)' },
+      { id: 'egg', name: 'たまご', emoji: '🥚', unit: 'こ', bg: 'linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)' },
+      { id: 'broom', name: 'ほうき', emoji: '🧹', unit: 'ほん', bg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' },
+      { id: 'car', name: 'くるま', emoji: '🚗', unit: 'だい', bg: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)' },
+      { id: 'cat', name: 'ねこ', emoji: '🐱', unit: 'ひき', bg: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)' },
+      { id: 'icecream', name: 'アイス', emoji: '🍦', unit: 'こ', bg: 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)' },
+      { id: 'pencil', name: 'えんぴつ', emoji: '✏️', unit: 'ほん', bg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' }
+    ];
+
+    // ドレミファソラシドレミ 音階周波数
+    const scaleFreqs = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25];
+
+    let currentTheme = themes[0];
+    let currentNumber = 0;
+    let audioCtx = null;
+
+    // Web Audio API 初期化
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    window.onload = () => {
+      createThemeButtons();
+      createNumberButtons();
+      initCanvas();
+      
+      document.body.addEventListener('touchstart', initAudio, { once: true });
+      document.body.addEventListener('click', initAudio, { once: true });
+      
+      setTimeout(() => {
+        speakText("1、2、3、4、5、6、7、8、9、10。すうじをえらんでね");
+      }, 500);
+    };
+
+    // テーマボタン生成
+    function createThemeButtons() {
+      const container = document.getElementById('themeContainer');
+      themes.forEach((t, index) => {
+        const btn = document.createElement('button');
+        btn.className = `theme-btn ${index === 0 ? 'active' : ''}`;
+        btn.innerText = t.emoji;
+        btn.title = t.name;
+        btn.onclick = () => selectTheme(t, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    // 数字ボタン生成 (1〜10)
+    function createNumberButtons() {
+      const grid = document.getElementById('numberGrid');
+      for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'num-btn';
+        btn.innerText = i;
+        btn.onclick = () => selectNumber(i);
+        grid.appendChild(btn);
+      }
+    }
+
+    // テーマ変更
+    function selectTheme(theme, btnElement) {
+      initAudio();
+      currentTheme = theme;
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+      document.body.style.background = theme.bg;
+
+      if (currentNumber > 0) {
+        updateDisplay();
+      }
+    }
+
+    // 数字選択時
+    function selectNumber(num) {
+      initAudio();
+      currentNumber = num;
+      
+      document.querySelectorAll('.num-btn').forEach((b, idx) => {
+        if (idx + 1 === num) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+
+      updateDisplay();
+
+      if (num === 10) {
+        triggerParty();
+      }
+    }
+
+    // 画面の更新と発声
+    function updateDisplay() {
+      const grid = document.getElementById('itemGrid');
+      const text = document.getElementById('textDisplay');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < currentNumber; i++) {
+        const span = document.createElement('span');
+        span.className = 'item-icon';
+        span.innerText = currentTheme.emoji;
+        
+        span.onclick = (e) => {
+          e.stopPropagation();
+          playScaleSound(i);
+          triggerSparkle(e.clientX, e.clientY);
+          vibrate();
+          speakText(`${i + 1}`);
+        };
+        grid.appendChild(span);
+      }
+
+      // 表示テキスト更新
+      text.innerHTML = `${currentTheme.name} <span class="big-num">${currentNumber}</span>${currentTheme.unit}`;
+
+      // 音声読み上げ
+      speakText(`${currentTheme.name}が ${currentNumber}${currentTheme.unit}`);
+    }
+
+    // 🛑 すとっぷ ボタン機能
+    function stopAll() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      vibrate(50);
+    }
+
+    // 🔄 りせっと ボタン機能
+    function resetAll() {
+      stopAll();
+      currentNumber = 0;
+      document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('itemGrid').innerHTML = '';
+      document.getElementById('textDisplay').innerText = 'すうじをおしてね';
+      vibrate(100);
+    }
+
+    // 音声リピートボタン
+    function speakCurrent() {
+      initAudio();
+      if (currentNumber > 0) {
+        updateDisplay();
+      } else {
+        speakText("1、2、3、4、5、6、7、8、9、10。すうじをえらんでね");
+      }
+    }
+
+    // 日本語音声読み上げ
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const uttr = new SpeechSynthesisUtterance(text);
+        uttr.lang = 'ja-JP';
+        uttr.rate = 0.8;
+        uttr.pitch = 1.15;
+        window.speechSynthesis.speak(uttr);
+      }
+    }
+
+    // バイブレーション
+    function vibrate(duration = 30) {
+      if (navigator.vibrate) {
+        navigator.vibrate(duration);
+      }
+    }
+
+    // ドレミ音階再生
+    function playScaleSound(index) {
+      if (!audioCtx) return;
+      const freq = scaleFreqs[index % scaleFreqs.length];
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    // 風船演出
+    function triggerParty() {
+      const overlay = document.getElementById('partyOverlay');
+      overlay.innerHTML = '';
+      const balloons = ['🎈', '🎉', '🌟', '🎊', '✨'];
+
+      for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+          const b = document.createElement('div');
+          b.className = 'balloon';
+          b.innerText = balloons[Math.floor(Math.random() * balloons.length)];
+          b.style.left = Math.random() * 90 + 'vw';
+          b.style.animationDuration = (3 + Math.random() * 2) + 's';
+          overlay.appendChild(b);
+
+          setTimeout(() => b.remove(), 5000);
+        }, i * 150);
+      }
+    }
+
+    // キラキラ粒子エフェクト
+    let canvas, ctx, particles = [];
+
+    function initCanvas() {
+      canvas = document.getElementById('effectCanvas');
+      const area = document.getElementById('displayArea');
+      canvas.width = area.clientWidth;
+      canvas.height = area.clientHeight;
+      ctx = canvas.getContext('2d');
+      requestAnimationFrame(updateParticles);
+    }
+
+    function triggerSparkle(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      for (let i = 0; i < 12; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 0.5) * 6,
+          size: Math.random() * 6 + 3,
+          color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+          life: 1
+        });
+      }
+    }
+
+    function updateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.03;
+
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fill();
+      }
+      requestAnimationFrame(updateParticles);
+    }
+
+    window.onresize = () => {
+      const area = document.getElementById('displayArea');
+      if (canvas && area) {
+        canvas.width = area.clientWidth;
+        canvas.height = area.clientHeight;
+      }
+    };
+  </script>
+</body>
+</html>

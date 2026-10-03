@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ひらがなのおべんきょう</title>
+  <style>
+    /* 画面全体の設定 */
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent; /* タップ時の青枠を防止 */
+    }
+
+    body {
+      font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+      background-color: #f0f8ff;
+      margin: 0;
+      padding: 12px;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 上部タイトル */
+    .app-title {
+      font-size: clamp(24px, 5vw, 36px);
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 0 0 15px 0;
+      background-color: #e0f2fe;
+      padding: 12px 20px;
+      border-radius: 20px;
+      display: inline-block;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    /* 共通ボタン基本スタイル */
+    button {
+      border: none;
+      border-radius: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 5px #888;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      touch-action: manipulation;
+    }
+    button:active {
+      box-shadow: 0 2px #555;
+      transform: translateY(3px);
+    }
+
+    /* ① あ行〜わ行の選択ボタンエリア */
+    .row-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .btn-row {
+      background-color: #4CAF50;
+      color: white;
+      font-size: clamp(18px, 4vw, 24px);
+      padding: 14px 8px;
+      width: 100%;
+    }
+
+    /* ② 選択された行の文字ボタン（あ・い・う・え・お） */
+    .char-container {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      min-height: 80px;
+      flex-wrap: wrap;
+    }
+
+    .btn-char {
+      background-color: #2196F3;
+      color: white;
+      font-size: clamp(36px, 8vw, 52px);
+      width: clamp(65px, 15vw, 85px);
+      height: clamp(65px, 15vw, 85px);
+      line-height: clamp(65px, 15vw, 85px);
+      border-radius: 50%;
+      padding: 0;
+    }
+
+    /* ② 単語・イラスト表示エリア */
+    .word-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      min-height: 160px;
+      margin-bottom: 20px;
+    }
+
+    .word-card {
+      background: white;
+      border: 4px solid #2196F3;
+      border-radius: 20px;
+      padding: 10px;
+      width: clamp(100px, 28vw, 150px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    
+    .word-image {
+      font-size: clamp(48px, 12vw, 68px);
+      display: block;
+      margin-bottom: 5px;
+      line-height: 1.1;
+    }
+
+    .word-text {
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: bold;
+      color: #333;
+      word-break: break-all;
+    }
+
+    /* ③ 下部固定コントロールパネル（すとっぷ・りせっと） */
+    .control-panel {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 2px dashed #bbd;
+    }
+
+    .btn-stop {
+      background-color: #ff4d4d;
+      color: white;
+      font-size: clamp(20px, 5vw, 26px);
+      padding: 14px 30px;
+      flex: 1;
+      max-width: 200px;
+    }
+
+    .btn-reset {
+      background-color: #ffaa00;
+      color: white;
+      font-size: clamp(20px, 5vw, 26px);
+      padding: 14px 30px;
+      flex: 1;
+      max-width: 200px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 上部タイトル -->
+  <div class="app-title">ひらがなのおべんきょう</div>
+
+  <!-- ① あ行〜わ行の選択エリア -->
+  <div class="row-selector" id="rowSelector"></div>
+
+  <!-- ② 選択行の文字一覧表示エリア -->
+  <div class="char-container" id="charContainer"></div>
+
+  <!-- ② イラストと単語表示エリア -->
+  <div class="word-container" id="wordContainer"></div>
+
+  <!-- ③ すとっぷ / りせっと ボタン（下部） -->
+  <div class="control-panel">
+    <button class="btn-stop" onclick="stopAudio()">すとっぷ</button>
+    <button class="btn-reset" onclick="resetApp()">りせっと</button>
+  </div>
+
+  <script>
+    // 50音データ
+    const hiraganaData = [
+      {
+        rowName: "あいうえお",
+        chars: [
+          { char: "あ", words: [{ text: "あめ", icon: "🍬" }, { text: "あか", icon: "🔴" }, { text: "あき", icon: "🍁" }] },
+          { char: "い", words: [{ text: "いぬ", icon: "🐶" }, { text: "いちご", icon: "🍓" }, { text: "いえ", icon: "🏠" }] },
+          { char: "う", words: [{ text: "うし", icon: "🐮" }, { text: "うみ", icon: "🌊" }, { text: "うさぎ", icon: "🐰" }] },
+          { char: "え", words: [{ text: "えんぴつ", icon: "✏️" }, { text: "えき", icon: "🚉" }, { text: "えび", icon: "🦐" }] },
+          { char: "お", words: [{ text: "おにぎり", icon: "🍙" }, { text: "おてら", icon: "🏯" }, { text: "おりがみ", icon: "📄" }] }
+        ]
+      },
+      {
+        rowName: "かきくけこ",
+        chars: [
+          { char: "か", words: [{ text: "かさ", icon: "☂️" }, { text: "かめ", icon: "🐢" }, { text: "かに", icon: "🦀" }] },
+          { char: "き", words: [{ text: "き", icon: "🌳" }, { text: "きつね", icon: "🦊" }, { text: "きりん", icon: "🦒" }] },
+          { char: "く", words: [{ text: "くるま", icon: "🚗" }, { text: "くま", icon: "🐻" }, { text: "くつ", icon: "👟" }] },
+          { char: "け", words: [{ text: "けーき", icon: "🍰" }, { text: "けむり", icon: "💨" }, { text: "けいさつ", icon: "👮" }] },
+          { char: "こ", words: [{ text: "こめ", icon: "🌾" }, { text: "こま", icon: "🪀" }, { text: "こうばん", icon: "🚓" }] }
+        ]
+      },
+      {
+        rowName: "さしすせそ",
+        chars: [
+          { char: "さ", words: [{ text: "さかな", icon: "🐟" }, { text: "さくら", icon: "🌸" }, { text: "ざっし", icon: "📚" }] },
+          { char: "し", words: [{ text: "しか", icon: "🦌" }, { text: "しんかんせん", icon: "🚅" }, { text: "しんぶん", icon: "📰" }] },
+          { char: "す", words: [{ text: "すいか", icon: "🍉" }, { text: "すずめ", icon: "🐦" }, { text: "すし", icon: "🍣" }] },
+          { char: "せ", words: [{ text: "せんせい", icon: "🧑‍🏫" }, { text: "せんぷうき", icon: "🌀" }, { text: "せけん", icon: "🌍" }] },
+          { char: "そ", words: [{ text: "そら", icon: "☁️" }, { text: "そうじき", icon: "🧹" }, { text: "そり", icon: "🛷" }] }
+        ]
+      },
+      {
+        rowName: "たちつてと",
+        chars: [
+          { char: "た", words: [{ text: "たいよう", icon: "☀️" }, { text: "たこ", icon: "🐙" }, { text: "たまご", icon: "🥚" }] },
+          { char: "ち", words: [{ text: "ちきゅう", icon: "🌍" }, { text: "ちーず", icon: "🧀" }, { text: "ちょうちょ", icon: "🦋" }] },
+          { char: "つ", words: [{ text: "つくえ", icon: "🪑" }, { text: "つみき", icon: "🧱" }, { text: "つき", icon: "🌙" }] },
+          { char: "て", words: [{ text: "てぶくろ", icon: "🧤" }, { text: "てがみ", icon: "✉️" }, { text: "てんとうむし", icon: "🐞" }] },
+          { char: "と", words: [{ text: "とけい", icon: "⏰" }, { text: "とまと", icon: "🍅" }, { text: "とり", icon: "🐦" }] }
+        ]
+      },
+      {
+        rowName: "なにぬねの",
+        chars: [
+          { char: "な", words: [{ text: "なす", icon: "🍆" }, { text: "なみ", icon: "🌊" }, { text: "なわとび", icon: "縄" }] },
+          { char: "に", words: [{ text: "にんじん", icon: "🥕" }, { text: "にじ", icon: "🌈" }, { text: "にわとり", icon: "🐔" }] },
+          { char: "ぬ", words: [{ text: "ぬいぐるみ", icon: "🧸" }, { text: "ぬりえ", icon: "🎨" }, { text: "ぬま", icon: "🏞️" }] },
+          { char: "ね", words: [{ text: "ねこ", icon: "🐱" }, { text: "ねずみ", icon: "🐭" }, { text: "ねぎ", icon: "🧅" }] },
+          { char: "の", words: [{ text: "のり", icon: "🍙" }, { text: "のりもの", icon: "🚌" }, { text: "ノート", icon: "📓" }] }
+        ]
+      },
+      {
+        rowName: "はひふへほ",
+        chars: [
+          { char: "は", speakText: "ハ", words: [{ text: "はな", icon: "🌸" }, { text: "はさみ", icon: "✂️" }, { text: "はし", icon: "🥢" }] },
+          { char: "ひ", words: [{ text: "ひこうき", icon: "✈️" }, { text: "ひまわり", icon: "🌻" }, { text: "ひつじ", icon: "🐑" }] },
+          { char: "ふ", words: [{ text: "ふね", icon: "🚢" }, { text: "ふうせん", icon: "🎈" }, { text: "ふくろう", icon: "🦉" }] },
+          { char: "へ", speakText: "ヘ", words: [{ text: "へび", icon: "🐍" }, { text: "へりこぷたー", icon: "🚁" }, { text: "へや", icon: "🚪" }] },
+          { char: "ほ", words: [{ text: "ほし", icon: "⭐" }, { text: "ほん", icon: "📖" }, { text: "ほうき", icon: "🧹" }] }
+        ]
+      },
+      {
+        rowName: "まみむめも",
+        chars: [
+          { char: "ま", words: [{ text: "まつり", icon: "🎆" }, { text: "まくら", icon: "🛏️" }, { text: "みかん", icon: "🍊" }] },
+          { char: "み", words: [{ text: "みず", icon: "💧" }, { text: "みみ", icon: "👂" }, { text: "みどり", icon: "🟢" }] },
+          { char: "む", words: [{ text: "むし", icon: "🐛" }, { text: "むぎ", icon: "🌾" }, { text: "むら", icon: "🏡" }] },
+          { char: "め", words: [{ text: "めがね", icon: "👓" }, { text: "め", icon: "👁️" }, { text: "めだまやき", icon: "🍳" }] },
+          { char: "も", words: [{ text: "もも", icon: "🍑" }, { text: "もり", icon: "🌲" }, { text: "もち", icon: "🍡" }] }
+        ]
+      },
+      {
+        rowName: "や ゆ よ",
+        chars: [
+          { char: "や", words: [{ text: "やま", icon: "⛰️" }, { text: "やさい", icon: "🥦" }, { text: "やぎ", icon: "🐐" }] },
+          { char: "ゆ", words: [{ text: "ゆき", icon: "❄️" }, { text: "ゆび", icon: "👆" }, { text: "ゆきだるま", icon: "☃️" }] },
+          { char: "よ", words: [{ text: "よる", icon: "🌃" }, { text: "ヨット", icon: "⛵" }, { text: "ようちえん", icon: "🏫" }] }
+        ]
+      },
+      {
+        rowName: "らりるれろ",
+        chars: [
+          { char: "ら", words: [{ text: "らいおん", icon: "🦁" }, { text: "らくだ", icon: "🐪" }, { text: "らっぱ", icon: "🎺" }] },
+          { char: "り", words: [{ text: "りんご", icon: "🍎" }, { text: "りす", icon: "🐿️" }, { text: "りぼん", icon: "🎀" }] },
+          { char: "る", words: [{ text: "るびー", icon: "💎" }, { text: "るすばんにゃんこ", icon: "🐱" }] },
+          { char: "れ", words: [{ text: "れもん", icon: "🍋" }, { text: "れんこん", icon: "🧅" }, { text: "れーすかー", icon: "🏎️" }] },
+          { char: "ろ", words: [{ text: "ろけっと", icon: "🚀" }, { text: "ろぼっと", icon: "🤖" }, { text: "ろば", icon: "🫏" }] }
+        ]
+      },
+      {
+        rowName: "わ お ん",
+        chars: [
+          { char: "わ", words: [{ text: "わに", icon: "🐊" }, { text: "わたあめ", icon: "☁️" }, { text: "わなげ", icon: "⭕" }] },
+          { char: "を", speakText: "ヲ", words: [{ text: "くつをはく", icon: "👟" }] },
+          { char: "ん", words: [{ text: "らいおん", icon: "🦁" }, { text: "みかん", icon: "🍊" }, { text: "きりん", icon: "🦒" }] }
+        ]
+      }
+    ];
+
+    let synth = window.speechSynthesis;
+
+    // 初期化：行ボタンの生成
+    function init() {
+      const rowSelector = document.getElementById('rowSelector');
+      rowSelector.innerHTML = '';
+      
+      hiraganaData.forEach((data, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-row';
+        btn.innerText = data.rowName;
+        btn.onclick = () => selectRow(index);
+        rowSelector.appendChild(btn);
+      });
+    }
+
+    // 行選択処理
+    function selectRow(rowIndex) {
+      stopAudio();
+      const rowData = hiraganaData[rowIndex];
+      const charContainer = document.getElementById('charContainer');
+      const wordContainer = document.getElementById('wordContainer');
+      
+      charContainer.innerHTML = '';
+      wordContainer.innerHTML = '';
+
+      rowData.chars.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-char';
+        btn.innerText = item.char;
+        btn.onclick = () => selectChar(item);
+        charContainer.appendChild(btn);
+      });
+
+      const fullSpeech = rowData.chars.map(c => c.speakText || c.char).join('、');
+      speakText(fullSpeech, 0.8);
+    }
+
+    // 文字選択処理
+    function selectChar(charItem) {
+      stopAudio();
+
+      const speechTarget = (charItem.speakText || charItem.char) + "ーー";
+      speakText(speechTarget, 1.0);
+
+      const wordContainer = document.getElementById('wordContainer');
+      wordContainer.innerHTML = '';
+
+      charItem.words.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'word-card';
+        card.onclick = () => speakText(w.text, 1.0);
+        card.innerHTML = `
+          <span class="word-image">${w.icon}</span>
+          <span class="word-text">${w.text}</span>
+        `;
+        wordContainer.appendChild(card);
+      });
+    }
+
+    // 音声再生
+    function speakText(text, rate = 1.0) {
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ja-JP';
+        utter.rate = rate;
+        utter.volume = 1.0;
+        synth.speak(utter);
+      }
+    }
+
+    // すとっぷ
+    function stopAudio() {
+      if (synth) {
+        synth.cancel();
+      }
+    }
+
+    // りせっと
+    function resetApp() {
+      stopAudio();
+      document.getElementById('charContainer').innerHTML = '';
+      document.getElementById('wordContainer').innerHTML = '';
+    }
+
+    init();
+  </script>
+</body>
+</html>
